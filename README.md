@@ -2,6 +2,8 @@
 
 Create perfect wallpapers for your Xteink X4 e-reader. Crop, resize, dither, and preview images with real-time rendering.
 
+**Try it now:** [https://xteink-wallpaper.vercel.app](https://xteink-wallpaper.vercel.app)
+
 ![Xteink X4 Wallpaper Maker](https://user-images.githubusercontent.com/jeremyxlewis/xteink-wallpaper/main/docs/screenshot.png)
 
 ## Features
