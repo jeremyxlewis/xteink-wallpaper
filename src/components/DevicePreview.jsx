@@ -54,8 +54,8 @@ export const DevicePreview = forwardRef(function DevicePreview(
       const containerWidth = containerRef.current.clientWidth;
       const containerHeight = containerRef.current.clientHeight;
       
-      const screenW = 480;
-      const screenH = 800;
+      const screenW = screenWidth - 24;
+      const screenH = screenHeight - 24;
       
       const scaleX = containerWidth / screenW;
       const scaleY = containerHeight / screenH;
@@ -67,7 +67,7 @@ export const DevicePreview = forwardRef(function DevicePreview(
     updateScale();
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
-  }, []);
+  }, [screenWidth, screenHeight]);
 
   const screenWidth = 480;
   const screenHeight = 800;
@@ -124,10 +124,11 @@ export const DevicePreview = forwardRef(function DevicePreview(
         />
 
         <rect
-          x="60"
-          y="60"
-          width={screenWidth}
-          height={screenHeight}
+          x="52"
+          y="52"
+          width={screenWidth - 24}
+          height={screenHeight - 24}
+          rx="14"
           fill="url(#screenGradient)"
           className="checkered-bg"
         />
@@ -154,10 +155,10 @@ export const DevicePreview = forwardRef(function DevicePreview(
       <div
         className="absolute cursor-grab"
         style={{
-          left: 60 * displayScale,
-          top: 60 * displayScale,
-          width: scaledWidth,
-          height: scaledHeight,
+          left: 52 * displayScale,
+          top: 52 * displayScale,
+          width: (screenWidth - 24) * displayScale,
+          height: (screenHeight - 24) * displayScale,
         }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -174,7 +175,11 @@ export const DevicePreview = forwardRef(function DevicePreview(
           ref={canvasRef}
           width={screenWidth}
           height={screenHeight}
-          className="w-full h-full"
+          className="w-full h-full origin-top-left"
+          style={{ 
+            width: screenWidth - 24,
+            height: screenHeight - 24,
+          }}
         />
       </div>
     </div>
