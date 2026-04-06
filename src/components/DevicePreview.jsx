@@ -50,6 +50,9 @@ export const DevicePreview = forwardRef(function DevicePreview(
 
   const screenWidth = 480;
   const screenHeight = 800;
+  const screenInset = 24;
+  const screenDisplayWidth = screenWidth - screenInset;
+  const screenDisplayHeight = screenHeight - screenInset;
 
   useEffect(() => {
     const updateScale = () => {
@@ -57,11 +60,8 @@ export const DevicePreview = forwardRef(function DevicePreview(
       const containerWidth = containerRef.current.clientWidth;
       const containerHeight = containerRef.current.clientHeight;
       
-      const screenW = screenWidth - 24;
-      const screenH = screenHeight - 24;
-      
-      const scaleX = containerWidth / screenW;
-      const scaleY = containerHeight / screenH;
+      const scaleX = containerWidth / (screenWidth + 80);
+      const scaleY = containerHeight / (screenHeight + 80);
       const baseScale = Math.min(scaleX, scaleY, 1) * 100;
       
       setScale(baseScale);
@@ -73,24 +73,19 @@ export const DevicePreview = forwardRef(function DevicePreview(
   }, [screenWidth, screenHeight]);
 
   const displayScale = scale / 100;
-  const scaledWidth = screenWidth * displayScale;
-  const scaledHeight = screenHeight * displayScale;
 
   return (
     <div
       ref={containerRef}
       className="relative flex items-center justify-center"
       style={{
-        minWidth: 480,
-        minHeight: 800,
-        width: scaledWidth + 40,
-        height: scaledHeight + 40,
+        width: (screenWidth + 80) * displayScale,
+        height: (screenHeight + 80) * displayScale,
       }}
     >
       <svg
         viewBox={`0 0 ${screenWidth + 80} ${screenHeight + 80}`}
         className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ transform: `scale(${displayScale})`, transformOrigin: 'center' }}
       >
         <defs>
           <linearGradient id="deviceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -157,8 +152,8 @@ export const DevicePreview = forwardRef(function DevicePreview(
         style={{
           left: 52 * displayScale,
           top: 52 * displayScale,
-          width: (screenWidth - 24) * displayScale,
-          height: (screenHeight - 24) * displayScale,
+          width: screenDisplayWidth * displayScale,
+          height: screenDisplayHeight * displayScale,
         }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -175,11 +170,7 @@ export const DevicePreview = forwardRef(function DevicePreview(
           ref={canvasRef}
           width={screenWidth}
           height={screenHeight}
-          className="w-full h-full origin-top-left"
-          style={{ 
-            width: screenWidth - 24,
-            height: screenHeight - 24,
-          }}
+          className="w-full h-full"
         />
       </div>
     </div>
