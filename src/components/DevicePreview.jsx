@@ -48,6 +48,9 @@ export const DevicePreview = forwardRef(function DevicePreview(
     isDragging.current = false;
   }, []);
 
+  const screenWidth = 480;
+  const screenHeight = 800;
+
   useEffect(() => {
     const updateScale = () => {
       if (!containerRef.current) return;
@@ -68,9 +71,6 @@ export const DevicePreview = forwardRef(function DevicePreview(
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
   }, [screenWidth, screenHeight]);
-
-  const screenWidth = 480;
-  const screenHeight = 800;
 
   const displayScale = scale / 100;
   const scaledWidth = screenWidth * displayScale;
