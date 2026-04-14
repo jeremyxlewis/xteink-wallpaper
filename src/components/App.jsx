@@ -8,7 +8,8 @@ import { ExportModal } from './ExportModal';
 import { ToastContainer, useToast } from '../hooks/useToast';
 import { useImageProcessor, FIT_MODE, DITHER_MODE, TRANSFORMS, DEVICE_SIZES } from '../hooks/useImageProcessor';
 import { ErrorBoundary } from './ErrorBoundary';
-import { LoadingSkeleton } from './LoadingSkeleton';
+import { LiveRegion } from './LiveRegion';
+import { announce } from '../utils/announce';
 
 export default function App() {
   const [mobileTab, setMobileTab] = useState('preview');
@@ -25,54 +26,51 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const imageIdRef = useRef(0);
 
+  const deviceSize = useMemo(() => DEVICE_SIZES.portrait, []);
+
   const { canvasRef, loadImage, processImage, exportBMP } = useImageProcessor();
   const previewRef = useRef(null);
   const { toasts, addToast, removeToast } = useToast();
 
-  const deviceSize = useMemo(() => DEVICE_SIZES.portrait, []);
-  const selectedImage = images[selectedIndex];
+  const loadImageRef = useRef(null);
+  const processImageRef = useRef(null);
+  const exportBMPRef = useRef(null);
 
-  // Portrait only - 480x800
-  const orientation = 'portrait';
+  useEffect(() => {
+    loadImageRef.current = loadImage;
+    processImageRef.current = processImage;
+    exportBMPRef.current = exportBMP;
+  }, [loadImage, processImage, exportBMP]);
+
+  const selectedImage = images[selectedIndex];
 
   useEffect(() => {
     if (selectedImage && canvasRef.current) {
       setIsProcessing(true);
-      loadImage(selectedImage.file).then(() => {
-        const width = deviceSize.width;
-        const height = deviceSize.height;
-        processImage(width, height, fitMode, scale, panX, panY, ditherMode, transforms);
+      loadImageRef.current(selectedImage.file).then(() => {
+        processImageRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms);
         setIsProcessing(false);
       }).catch(() => {
         setIsProcessing(false);
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedImage, orientation, fitMode, scale, panX, panY, ditherMode, transforms, deviceSize, loadImage, processImage]);
+  }, [selectedImage, fitMode, scale, panX, panY, ditherMode, transforms, deviceSize]);
 
-  const handleAddImages = useCallback(async (files) => {
-    for (const file of files) {
-      const thumbnail = await createThumbnail(file);
-      setImages((prev) => [
-        ...prev,
-        {
-          id: ++imageIdRef.current,
-          file,
-          name: file.name,
-          thumbnail,
-          fitMode: FIT_MODE.COVER,
-          scale: 100,
-          panX: 0,
-          panY: 0,
-          ditherMode: DITHER_MODE.NONE,
-          transforms: [],
-        },
-      ]);
-    }
-    if (selectedIndex < 0) {
-      setSelectedIndex(0);
+  useEffect(() => {
+    if (selectedIndex >= 0 && images[selectedIndex]) {
+      const img = images[selectedIndex];
+      setFitMode(img.fitMode);
+      setScale(img.scale);
+      setPanX(img.panX);
+      setPanY(img.panY);
+      setDitherMode(img.ditherMode);
+      setTransforms(img.transforms || []);
+      announce(`Selected image ${selectedIndex + 1} of ${images.length}`);
     }
   }, [selectedIndex]);
+
+  const MAX_FILE_SIZE = 50 * 1024 * 1024;
+  const MAX_FILES = 100;
 
   const createThumbnail = (file) => {
     return new Promise((resolve) => {
@@ -100,6 +98,55 @@ export default function App() {
       reader.readAsDataURL(file);
     });
   };
+
+  const handleAddImages = useCallback(async (files) => {
+    let validFiles = files.filter((file) => {
+      if (!file.type.startsWith('image/')) {
+        addToast(`${file.name} is not an image`, 'error');
+        return false;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        addToast(`${file.name} exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`, 'error');
+        return false;
+      }
+      return true;
+    });
+
+    const remainingSlots = MAX_FILES - images.length;
+    if (validFiles.length > remainingSlots) {
+      validFiles = validFiles.slice(0, remainingSlots);
+      addToast(`Only ${remainingSlots} slots available`, 'info');
+    }
+
+    for (const file of validFiles) {
+      try {
+        const thumbnail = await createThumbnail(file);
+        setImages((prev) => [
+          ...prev,
+          {
+            id: ++imageIdRef.current,
+            file,
+            name: file.name,
+            thumbnail,
+            fitMode: FIT_MODE.COVER,
+            scale: 100,
+            panX: 0,
+            panY: 0,
+            ditherMode: DITHER_MODE.NONE,
+            transforms: [],
+          },
+        ]);
+      } catch {
+        addToast(`Failed to load ${file.name}`, 'error');
+      }
+    }
+    if (selectedIndex < 0 && images.length === 0) {
+      setSelectedIndex(0);
+    }
+    if (validFiles.length > 0) {
+      addToast(`${validFiles.length} image${validFiles.length > 1 ? 's' : ''} added`, 'success');
+    }
+  }, [selectedIndex, images.length, addToast]);
 
   const handleSelect = useCallback((idx) => {
     setSelectedIndex(idx);
@@ -173,16 +220,14 @@ export default function App() {
   const handleExportSingle = useCallback(async () => {
     if (!selectedImage || !canvasRef.current) return;
 
-    const width = deviceSize.width;
-    const height = deviceSize.height;
-    const blob = exportBMP(width, height, fitMode, scale, panX, panY, ditherMode, transforms);
+    const blob = exportBMPRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms);
     
     if (blob) {
       const name = selectedImage.name.replace(/\.[^/.]+$/, '') + '.bmp';
       saveAs(blob, name);
       addToast('Image exported', 'success');
     }
-  }, [selectedImage, deviceSize, fitMode, scale, panX, panY, ditherMode, transforms, exportBMP, addToast, canvasRef]);
+  }, [selectedImage, deviceSize, fitMode, scale, panX, panY, ditherMode, transforms, addToast]);
 
   const handleExportBatch = useCallback(async () => {
     if (images.length === 0) return;
@@ -190,32 +235,42 @@ export default function App() {
     setIsExporting(true);
     setExportModal({ open: true, progress: 0, total: images.length, currentFile: '' });
 
+    const processAndExport = async (img, index) => {
+      const useScale = index === selectedIndex ? scale : img.scale;
+      const useFitMode = index === selectedIndex ? fitMode : img.fitMode;
+      const usePanX = index === selectedIndex ? panX : img.panX;
+      const usePanY = index === selectedIndex ? panY : img.panY;
+      const useDitherMode = index === selectedIndex ? ditherMode : img.ditherMode;
+      const useTransforms = index === selectedIndex ? transforms : (img.transforms || []);
+
+      await loadImageRef.current(img.file);
+      processImageRef.current(deviceSize.width, deviceSize.height, useFitMode, useScale, usePanX, usePanY, useDitherMode, useTransforms);
+      
+      return exportBMPRef.current(deviceSize.width, deviceSize.height, useFitMode, useScale, usePanX, usePanY, useDitherMode, useTransforms);
+    };
+
     const zip = new JSZip();
-    const width = deviceSize.width;
-    const height = deviceSize.height;
+    const batchSize = 3;
+    const totalBatches = Math.ceil(images.length / batchSize);
 
-    for (let i = 0; i < images.length; i++) {
-      const img = images[i];
-      setExportModal((prev) => ({ ...prev, currentFile: img.name }));
+    for (let batch = 0; batch < totalBatches; batch++) {
+      const startIdx = batch * batchSize;
+      const endIdx = Math.min(startIdx + batchSize, images.length);
+      const batchImages = images.slice(startIdx, endIdx);
 
-      // Use current state for selected image, stored settings for others
-      const useScale = i === selectedIndex ? scale : img.scale;
-      const useFitMode = i === selectedIndex ? fitMode : img.fitMode;
-      const usePanX = i === selectedIndex ? panX : img.panX;
-      const usePanY = i === selectedIndex ? panY : img.panY;
-      const useDitherMode = i === selectedIndex ? ditherMode : img.ditherMode;
-      const useTransforms = i === selectedIndex ? transforms : (img.transforms || []);
+      const results = await Promise.all(
+        batchImages.map((img, i) => processAndExport(img, startIdx + i))
+      );
 
-      await loadImage(img.file);
-      processImage(width, height, useFitMode, useScale, usePanX, usePanY, useDitherMode, useTransforms);
-      
-      const blob = exportBMP(width, height, useFitMode, useScale, usePanX, usePanY, useDitherMode, useTransforms);
-      
-      if (blob) {
-        zip.file(`wallpaper_${String(i + 1).padStart(3, '0')}.bmp`, blob);
-      }
+      results.forEach((blob, i) => {
+        const fileIdx = startIdx + i;
+        if (blob) {
+          setExportModal((prev) => ({ ...prev, currentFile: images[fileIdx].name }));
+          zip.file(`wallpaper_${String(fileIdx + 1).padStart(3, '0')}.bmp`, blob);
+        }
+      });
 
-      setExportModal((prev) => ({ ...prev, progress: i + 1 }));
+      setExportModal((prev) => ({ ...prev, progress: endIdx }));
     }
 
     const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -224,22 +279,7 @@ export default function App() {
     setExportModal((prev) => ({ ...prev, open: false }));
     setIsExporting(false);
     addToast(`${images.length} images exported as ZIP`, 'success');
-  }, [images, selectedIndex, deviceSize, fitMode, scale, panX, panY, ditherMode, transforms, loadImage, processImage, exportBMP, addToast]);
-
-  useEffect(() => {
-    if (selectedIndex >= 0 && images[selectedIndex]) {
-      const img = images[selectedIndex];
-      setFitMode(img.fitMode);
-      setScale(img.scale);
-      setPanX(img.panX);
-      setPanY(img.panY);
-      setDitherMode(img.ditherMode);
-      setTransforms(img.transforms || []);
-    }
-  }, [selectedIndex, images]);
-
-  // Only load settings when switching images, don't auto-save on every control change
-  // Settings are preserved in state and applied on export
+  }, [images, selectedIndex, deviceSize, fitMode, scale, panX, panY, ditherMode, transforms, addToast]);
 
   return (
     <ErrorBoundary>
@@ -364,6 +404,7 @@ export default function App() {
         />
 
         <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <LiveRegion />
       </div>
     </ErrorBoundary>
   );
