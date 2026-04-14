@@ -6,7 +6,7 @@ import { DevicePreview } from './DevicePreview';
 import { Controls } from './Controls';
 import { ExportModal } from './ExportModal';
 import { ToastContainer, useToast } from '../hooks/useToast';
-import { useImageProcessor, FIT_MODE, DITHER_MODE, TRANSFORMS, DEVICE_SIZES } from '../hooks/useImageProcessor';
+import { useImageProcessor, FIT_MODE, DITHER_MODE, TRANSFORMS, DEVICE_SIZES, VIEW_MODE } from '../hooks/useImageProcessor';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LiveRegion } from './LiveRegion';
 import { announce } from '../utils/announce';
@@ -24,23 +24,47 @@ export default function App() {
   const [exportModal, setExportModal] = useState({ open: false, progress: 0, total: 0, currentFile: '' });
   const [isExporting, setIsExporting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // View mode (Image or ASCII)
+  const [viewMode, setViewMode] = useState(VIEW_MODE.IMAGE);
+
+  // Image adjustments
+  const [brightness, setBrightness] = useState(0);
+  const [contrast, setContrast] = useState(1);
+
+  // ASCII options
+  const [charSet, setCharSet] = useState('CLASSIC');
+  const [customChars, setCustomChars] = useState('');
+  const [fontSize, setFontSize] = useState(10);
+  const [charSpacing, setCharSpacing] = useState(1);
+  const [lineHeight, setLineHeight] = useState(1);
+  const [invertColors, setInvertColors] = useState(false);
+  const [flipH, setFlipH] = useState(false);
+  const [flipV, setFlipV] = useState(false);
+  const [padding, setPadding] = useState(0);
+  const [ditherStrength, setDitherStrength] = useState(0);
+
   const imageIdRef = useRef(0);
 
   const deviceSize = useMemo(() => DEVICE_SIZES.portrait, []);
 
-  const { canvasRef, loadImage, processImage, exportBMP } = useImageProcessor();
+  const { canvasRef, loadImage, processImage, processASCII, exportBMP, exportASCIIBMP } = useImageProcessor();
   const previewRef = useRef(null);
   const { toasts, addToast, removeToast } = useToast();
 
   const loadImageRef = useRef(null);
   const processImageRef = useRef(null);
+  const processASCIIRef = useRef(null);
   const exportBMPRef = useRef(null);
+  const exportASCIIBMPRef = useRef(null);
 
   useEffect(() => {
     loadImageRef.current = loadImage;
     processImageRef.current = processImage;
+    processASCIIRef.current = processASCII;
     exportBMPRef.current = exportBMP;
-  }, [loadImage, processImage, exportBMP]);
+    exportASCIIBMPRef.current = exportASCIIBMP;
+  }, [loadImage, processImage, processASCII, exportBMP, exportASCIIBMP]);
 
   const selectedImage = images[selectedIndex];
 
@@ -48,13 +72,47 @@ export default function App() {
     if (selectedImage && canvasRef.current) {
       setIsProcessing(true);
       loadImageRef.current(selectedImage.file).then(() => {
-        processImageRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms);
+        if (viewMode === VIEW_MODE.ASCII) {
+          processASCIIRef.current(
+            deviceSize.width,
+            deviceSize.height,
+            fitMode,
+            scale,
+            panX,
+            panY,
+            ditherMode,
+            transforms,
+            {
+              charSet,
+              customChars,
+              fontSize,
+              charSpacing,
+              lineHeight,
+              invertColors,
+              flipH,
+              flipV,
+              padding,
+              ditherStrength,
+              brightness,
+              contrast,
+              saturation: 1,
+              gamma: 1,
+            }
+          );
+        } else {
+          processImageRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms, {
+            brightness,
+            contrast,
+            saturation: 1,
+            gamma: 1,
+          });
+        }
         setIsProcessing(false);
       }).catch(() => {
         setIsProcessing(false);
       });
     }
-  }, [selectedImage, fitMode, scale, panX, panY, ditherMode, transforms, deviceSize]);
+  }, [selectedImage, fitMode, scale, panX, panY, ditherMode, transforms, deviceSize, viewMode, charSet, customChars, fontSize, charSpacing, lineHeight, invertColors, flipH, flipV, padding, ditherStrength, brightness, contrast]);
 
   useEffect(() => {
     if (selectedIndex >= 0 && images[selectedIndex]) {
@@ -200,6 +258,18 @@ export default function App() {
     setPanY(0);
     setDitherMode(DITHER_MODE.NONE);
     setTransforms([]);
+    setBrightness(0);
+    setContrast(1);
+    setCharSet('CLASSIC');
+    setCustomChars('');
+    setFontSize(10);
+    setCharSpacing(1);
+    setLineHeight(1);
+    setInvertColors(false);
+    setFlipH(false);
+    setFlipV(false);
+    setPadding(0);
+    setDitherStrength(0);
   }, []);
 
   const handleApplyToAll = useCallback(() => {
@@ -220,14 +290,41 @@ export default function App() {
   const handleExportSingle = useCallback(async () => {
     if (!selectedImage || !canvasRef.current) return;
 
-    const blob = exportBMPRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms);
+    const asciiOptions = {
+      charSet,
+      customChars,
+      fontSize,
+      charSpacing,
+      lineHeight,
+      invertColors,
+      flipH,
+      flipV,
+      padding,
+      ditherStrength,
+      brightness,
+      contrast,
+      saturation: 1,
+      gamma: 1,
+    };
+
+    const imageOptions = {
+      brightness,
+      contrast,
+      saturation: 1,
+      gamma: 1,
+    };
+
+    const blob = viewMode === VIEW_MODE.ASCII
+      ? exportASCIIBMPRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms, asciiOptions)
+      : exportBMPRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms, imageOptions);
     
     if (blob) {
-      const name = selectedImage.name.replace(/\.[^/.]+$/, '') + '.bmp';
+      const suffix = viewMode === VIEW_MODE.ASCII ? '_ascii' : '';
+      const name = selectedImage.name.replace(/\.[^/.]+$/, '') + suffix + '.bmp';
       saveAs(blob, name);
       addToast('Image exported', 'success');
     }
-  }, [selectedImage, deviceSize, fitMode, scale, panX, panY, ditherMode, transforms, addToast]);
+  }, [selectedImage, deviceSize, fitMode, scale, panX, panY, ditherMode, transforms, viewMode, charSet, customChars, fontSize, charSpacing, lineHeight, invertColors, flipH, flipV, padding, ditherStrength, brightness, contrast, addToast]);
 
   const handleExportBatch = useCallback(async () => {
     if (images.length === 0) return;
@@ -361,6 +458,32 @@ export default function App() {
               onTransformsChange={setTransforms}
               onReset={handleReset}
               onApplyToAll={handleApplyToAll}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              charSet={charSet}
+              onCharSetChange={setCharSet}
+              customChars={customChars}
+              onCustomCharsChange={setCustomChars}
+              fontSize={fontSize}
+              onFontSizeChange={setFontSize}
+              charSpacing={charSpacing}
+              onCharSpacingChange={setCharSpacing}
+              lineHeight={lineHeight}
+              onLineHeightChange={setLineHeight}
+              invertColors={invertColors}
+              onInvertColorsChange={setInvertColors}
+              flipH={flipH}
+              onFlipHChange={setFlipH}
+              flipV={flipV}
+              onFlipVChange={setFlipV}
+              padding={padding}
+              onPaddingChange={setPadding}
+              ditherStrength={ditherStrength}
+              onDitherStrengthChange={setDitherStrength}
+              brightness={brightness}
+              onBrightnessChange={setBrightness}
+              contrast={contrast}
+              onContrastChange={setContrast}
             />
           </div>
         </main>
