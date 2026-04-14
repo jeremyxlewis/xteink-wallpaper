@@ -500,7 +500,7 @@ export default function App() {
           </div>
         </main>
 
-        <footer className="sticky bottom-0 glass-panel border-t border-[var(--color-border-subtle)] px-4 py-3 z-40">
+        <footer className="sticky bottom-0 glass-panel border-t border-[var(--color-border-subtle)] px-4 py-3 z-40 pb-safe">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="text-xs text-[var(--color-text-secondary)] font-mono order-2 sm:order-1">
               Drag to pan • Scroll to zoom

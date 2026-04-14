@@ -35,6 +35,13 @@ export const DevicePreview = forwardRef(function DevicePreview(
     lastPos.current = { x: e.clientX, y: e.clientY };
   }, []);
 
+  const handleTouchStart = useCallback((e) => {
+    if (e.touches.length === 1) {
+      isDragging.current = true;
+      lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  }, []);
+
   const handleMouseMove = useCallback((e) => {
     if (!isDragging.current) return;
     const dx = e.clientX - lastPos.current.x;
@@ -44,7 +51,21 @@ export const DevicePreview = forwardRef(function DevicePreview(
     lastPos.current = { x: e.clientX, y: e.clientY };
   }, [onPanChange]);
 
+  const handleTouchMove = useCallback((e) => {
+    if (!isDragging.current || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - lastPos.current.x;
+    const dy = touch.clientY - lastPos.current.y;
+    panRef.current = { x: panRef.current.x + dx, y: panRef.current.y + dy };
+    onPanChange?.(panRef.current.x, panRef.current.y);
+    lastPos.current = { x: touch.clientX, y: touch.clientY };
+  }, [onPanChange]);
+
   const handleMouseUp = useCallback(() => {
+    isDragging.current = false;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
     isDragging.current = false;
   }, []);
 
@@ -148,7 +169,7 @@ export const DevicePreview = forwardRef(function DevicePreview(
       </svg>
 
       <div
-        className="absolute cursor-grab"
+        className="absolute cursor-grab touch-none"
         style={{
           left: 52 * displayScale,
           top: 52 * displayScale,
@@ -160,6 +181,9 @@ export const DevicePreview = forwardRef(function DevicePreview(
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-surface)]/80 backdrop-blur-sm z-10">

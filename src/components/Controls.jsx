@@ -32,11 +32,12 @@ const transformOptions = [
   { value: TRANSFORMS.INVERT, icon: Contrast, desc: 'Invert' },
 ];
 
-function Slider({ label, value, onChange, min, max, step = 1, unit = '', displayValue }) {
+function Slider({ label, value, onChange, min, max, step = 1, unit = '', displayValue, id }) {
+  const sliderId = id || label.toLowerCase().replace(/\s+/g, '-');
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+        <label htmlFor={sliderId} className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
           {label}
         </label>
         <span className="text-xs font-mono text-[var(--color-accent)]">
@@ -44,6 +45,7 @@ function Slider({ label, value, onChange, min, max, step = 1, unit = '', display
         </span>
       </div>
       <input
+        id={sliderId}
         type="range"
         min={min}
         max={max}
@@ -109,7 +111,7 @@ export function Controls({
   const charSetKeys = getAllCharSetKeys();
 
   return (
-    <div className="w-full md:w-64 lg:w-72 flex flex-col">
+    <div className="w-full max-w-72 flex flex-col">
       <div className="p-4 pb-2">
         <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
           Controls
@@ -129,7 +131,7 @@ export function Controls({
                 aria-label="Image mode"
                 aria-pressed={viewMode === VIEW_MODE.IMAGE}
                 onClick={() => onViewModeChange(VIEW_MODE.IMAGE)}
-                className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
+                className={`flex items-center justify-center gap-2 p-3 min-w-11 min-h-11 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
                   viewMode === VIEW_MODE.IMAGE
                     ? 'border-[var(--color-accent)] bg-[var(--color-accent-glow)]'
                     : 'border-[var(--color-border)] hover:border-[var(--color-text-secondary)]'
@@ -143,7 +145,7 @@ export function Controls({
                 aria-label="ASCII mode"
                 aria-pressed={viewMode === VIEW_MODE.ASCII}
                 onClick={() => onViewModeChange(VIEW_MODE.ASCII)}
-                className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
+                className={`flex items-center justify-center gap-2 p-3 min-w-11 min-h-11 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
                   viewMode === VIEW_MODE.ASCII
                     ? 'border-[var(--color-accent)] bg-[var(--color-accent-glow)]'
                     : 'border-[var(--color-border)] hover:border-[var(--color-text-secondary)]'
@@ -169,7 +171,7 @@ export function Controls({
                   aria-pressed={transforms.includes(opt.value)}
                   onClick={() => handleTransformToggle(opt.value)}
                   title={opt.desc}
-                  className={`flex items-center justify-center p-2 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
+                  className={`flex items-center justify-center p-2.5 min-w-11 min-h-11 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
                     transforms.includes(opt.value)
                       ? 'border-[var(--color-accent)] bg-[var(--color-accent-glow)] text-[var(--color-accent)]'
                       : 'border-[var(--color-border)] hover:border-[var(--color-text-secondary)] text-[var(--color-text-secondary)]'
@@ -203,7 +205,7 @@ export function Controls({
                   aria-label={`Fit mode: ${opt.label} - ${opt.desc}`}
                   aria-pressed={fitMode === opt.value}
                   onClick={() => onFitModeChange(opt.value)}
-                  className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
+                  className={`flex flex-col items-center gap-1 p-3 min-w-11 min-h-11 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
                     fitMode === opt.value
                       ? 'border-[var(--color-accent)] bg-[var(--color-accent-glow)]'
                       : 'border-[var(--color-border)] hover:border-[var(--color-text-secondary)]'
@@ -228,14 +230,15 @@ export function Controls({
 
           {/* Pan */}
           <div className="space-y-2">
-            <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+            <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
               Pan
-            </label>
+            </span>
             
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] w-6 text-[var(--color-text-secondary)]">X</span>
+                <label htmlFor="pan-x" className="text-[10px] w-6 text-[var(--color-text-secondary)]">X</label>
                 <input
+                  id="pan-x"
                   type="range"
                   aria-label="Pan horizontal"
                   min="-200"
@@ -247,8 +250,9 @@ export function Controls({
                 <span className="text-[10px] font-mono w-10 text-right text-[var(--color-text-secondary)]">{panX}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] w-6 text-[var(--color-text-secondary)]">Y</span>
+                <label htmlFor="pan-y" className="text-[10px] w-6 text-[var(--color-text-secondary)]">Y</label>
                 <input
+                  id="pan-y"
                   type="range"
                   aria-label="Pan vertical"
                   min="-200"
@@ -300,7 +304,7 @@ export function Controls({
                   aria-label={`Dither: ${opt.label} - ${opt.desc}`}
                   aria-pressed={ditherMode === opt.value}
                   onClick={() => onDitherModeChange(opt.value)}
-                  className={`flex flex-col items-start p-2 rounded-xl border text-left transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
+                  className={`flex flex-col items-start p-2.5 min-w-11 min-h-11 rounded-xl border text-left transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${
                     ditherMode === opt.value
                       ? 'border-[var(--color-accent)] bg-[var(--color-accent-glow)]'
                       : 'border-[var(--color-border)] hover:border-[var(--color-text-secondary)]'
@@ -334,10 +338,11 @@ export function Controls({
 
               {/* Character Set */}
               <div className="space-y-2">
-                <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+                <label htmlFor="charset-select" className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
                   Character Set
                 </label>
                 <select
+                  id="charset-select"
                   value={charSet}
                   onChange={(e) => onCharSetChange(e.target.value)}
                   className="w-full p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-sm focus:border-[var(--color-accent)] focus:outline-none"
@@ -353,10 +358,11 @@ export function Controls({
               {/* Custom Characters */}
               {charSet === 'CUSTOM' && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+                  <label htmlFor="custom-chars" className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
                     Custom Chars
                   </label>
                   <input
+                    id="custom-chars"
                     type="text"
                     value={customChars}
                     onChange={(e) => onCustomCharsChange(e.target.value)}
@@ -411,7 +417,7 @@ export function Controls({
                   aria-label="Invert colors"
                   aria-pressed={invertColors}
                   onClick={() => onInvertColorsChange(!invertColors)}
-                  className={`flex items-center justify-center p-2 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
+                  className={`flex items-center justify-center p-2.5 min-w-11 min-h-11 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
                     invertColors
                       ? 'border-[var(--color-accent)] bg-[var(--color-accent-glow)] text-[var(--color-accent)]'
                       : 'border-[var(--color-border)] hover:border-[var(--color-text-secondary)] text-[var(--color-text-secondary)]'
@@ -424,7 +430,7 @@ export function Controls({
                   aria-label="Flip horizontal"
                   aria-pressed={flipH}
                   onClick={() => onFlipHChange(!flipH)}
-                  className={`flex items-center justify-center p-2 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
+                  className={`flex items-center justify-center p-2.5 min-w-11 min-h-11 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
                     flipH
                       ? 'border-[var(--color-accent)] bg-[var(--color-accent-glow)] text-[var(--color-accent)]'
                       : 'border-[var(--color-border)] hover:border-[var(--color-text-secondary)] text-[var(--color-text-secondary)]'
@@ -437,7 +443,7 @@ export function Controls({
                   aria-label="Flip vertical"
                   aria-pressed={flipV}
                   onClick={() => onFlipVChange(!flipV)}
-                  className={`flex items-center justify-center p-2 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
+                  className={`flex items-center justify-center p-2.5 min-w-11 min-h-11 rounded-xl border transition-all duration-300 hover:scale-105 active:scale-95 ${
                     flipV
                       ? 'border-[var(--color-accent)] bg-[var(--color-accent-glow)] text-[var(--color-accent)]'
                       : 'border-[var(--color-border)] hover:border-[var(--color-text-secondary)] text-[var(--color-text-secondary)]'

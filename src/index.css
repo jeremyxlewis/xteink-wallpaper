@@ -239,3 +239,7 @@ input[type="range"]::-moz-range-thumb {
   -webkit-backdrop-filter: blur(32px);
   border: 1px solid var(--color-border);
 }
+
+.pb-safe {
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+}
