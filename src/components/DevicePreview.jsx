@@ -1,7 +1,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle, useState, useCallback } from 'react';
 
 export const DevicePreview = forwardRef(function DevicePreview(
-  { onCanvasReady, onPanChange, onScaleChange, isLoading },
+  { onCanvasReady, onPanChange, onScaleChange, isLoading, canvasWidth = 480, canvasHeight = 800 },
   ref
 ) {
   const containerRef = useRef(null);
@@ -48,8 +48,8 @@ export const DevicePreview = forwardRef(function DevicePreview(
     isDragging.current = false;
   }, []);
 
-  const screenWidth = 480;
-  const screenHeight = 800;
+  const screenWidth = canvasWidth;
+  const screenHeight = canvasHeight;
   const screenInset = 24;
   const screenDisplayWidth = screenWidth - screenInset;
   const screenDisplayHeight = screenHeight - screenInset;

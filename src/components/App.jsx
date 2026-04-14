@@ -43,6 +43,9 @@ export default function App() {
   const [flipV, setFlipV] = useState(false);
   const [padding, setPadding] = useState(0);
   const [ditherStrength, setDitherStrength] = useState(0);
+  
+  // Track rendered canvas dimensions
+  const [renderedDimensions, setRenderedDimensions] = useState({ width: 480, height: 800 });
 
   const imageIdRef = useRef(0);
 
@@ -73,7 +76,7 @@ export default function App() {
       setIsProcessing(true);
       loadImageRef.current(selectedImage.file).then(() => {
         if (viewMode === VIEW_MODE.ASCII) {
-          processASCIIRef.current(
+          const result = processASCIIRef.current(
             deviceSize.width,
             deviceSize.height,
             fitMode,
@@ -99,6 +102,12 @@ export default function App() {
               gamma: 1,
             }
           );
+          if (result && result.dimensions) {
+            setRenderedDimensions({
+              width: result.dimensions.width,
+              height: result.dimensions.height,
+            });
+          }
         } else {
           processImageRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms, {
             brightness,
@@ -106,6 +115,7 @@ export default function App() {
             saturation: 1,
             gamma: 1,
           });
+          setRenderedDimensions({ width: deviceSize.width, height: deviceSize.height });
         }
         setIsProcessing(false);
       }).catch(() => {
@@ -428,6 +438,8 @@ export default function App() {
             <DevicePreview
               ref={previewRef}
               isLoading={isProcessing}
+              canvasWidth={renderedDimensions.width}
+              canvasHeight={renderedDimensions.height}
               onCanvasReady={(canvas) => {
                 canvasRef.current = canvas;
               }}

@@ -248,7 +248,7 @@ export function useImageProcessor() {
     asciiOptions = {}
   ) => {
     const canvas = canvasRef.current;
-    if (!canvas || !sourceImageRef.current) return null;
+    if (!canvas || !sourceImageRef.current) return { canvas: null, dimensions: { width: targetWidth, height: targetHeight } };
 
     const img = sourceImageRef.current;
     canvas.width = targetWidth;
@@ -428,7 +428,12 @@ export function useImageProcessor() {
     return {
       canvas,
       text: asciiResult.text,
-      dimensions: asciiResult.dimensions,
+      dimensions: {
+        width: asciiResult.dimensions.width,
+        height: asciiResult.dimensions.height,
+        charsWide: asciiResult.dimensions.charsWide,
+        charsTall: asciiResult.dimensions.charsTall,
+      },
     };
   }, []);
 
