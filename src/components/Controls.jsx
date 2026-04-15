@@ -37,7 +37,7 @@ function Slider({ label, value, onChange, min, max, step = 1, unit = '', display
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label htmlFor={sliderId} className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+        <label htmlFor={sliderId} className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
           {label}
         </label>
         <span className="text-xs font-mono text-[var(--color-accent)]">
@@ -111,18 +111,18 @@ export function Controls({
   const charSetKeys = getAllCharSetKeys();
 
   return (
-    <div className="w-full max-w-72 flex flex-col">
+    <div className="w-full flex flex-col">
       <div className="p-4 pb-2">
-        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
+        <h2 className="text-xs sm:text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
           Controls
-        </span>
+        </h2>
       </div>
 
-      <div className="flex-1 mx-4 mb-4 rounded-2xl glass-panel overflow-hidden">
-        <div className="p-4 space-y-5 max-h-[calc(100vh-320px)] overflow-y-auto">
+      <div className="flex-1 rounded-2xl glass-panel">
+        <div className="p-4 space-y-5">
           {/* View Mode Toggle */}
           <div className="space-y-2">
-            <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+            <label className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
               View Mode
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -138,7 +138,7 @@ export function Controls({
                 }`}
               >
                 <Image className={`w-4 h-4 ${viewMode === VIEW_MODE.IMAGE ? 'text-[var(--color-accent)]' : ''}`} />
-                <span className="text-[10px] font-medium">Image</span>
+                <span className="text-xs font-medium">Image</span>
               </button>
               <button
                 type="button"
@@ -152,14 +152,14 @@ export function Controls({
                 }`}
               >
                 <Type className={`w-4 h-4 ${viewMode === VIEW_MODE.ASCII ? 'text-[var(--color-accent)]' : ''}`} />
-                <span className="text-[10px] font-medium">ASCII</span>
+                <span className="text-xs font-medium">ASCII</span>
               </button>
             </div>
           </div>
 
           {/* Transform */}
           <div className="space-y-2">
-            <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+            <label className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
               Transform
             </label>
             <div className="grid grid-cols-6 gap-1.5">
@@ -194,7 +194,7 @@ export function Controls({
 
           {/* Fit Mode */}
           <div className="space-y-2">
-            <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+            <label className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
               Fit Mode
             </label>
             <div className="grid grid-cols-3 gap-1.5">
@@ -212,7 +212,7 @@ export function Controls({
                   }`}
                 >
                   <opt.icon className={`w-4 h-4 ${fitMode === opt.value ? 'text-[var(--color-accent)]' : ''}`} />
-                  <span className="text-[10px] font-medium">{opt.label}</span>
+                  <span className="text-xs font-medium">{opt.label}</span>
                 </button>
               ))}
             </div>
@@ -230,13 +230,13 @@ export function Controls({
 
           {/* Pan */}
           <div className="space-y-2">
-            <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+            <span className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
               Pan
             </span>
             
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <label htmlFor="pan-x" className="text-[10px] w-6 text-[var(--color-text-secondary)]">X</label>
+                <label htmlFor="pan-x" className="text-xs w-6 text-[var(--color-text-secondary)]">X</label>
                 <input
                   id="pan-x"
                   type="range"
@@ -247,10 +247,10 @@ export function Controls({
                   onChange={(e) => onPanXChange(Number(e.target.value))}
                   className="flex-1"
                 />
-                <span className="text-[10px] font-mono w-10 text-right text-[var(--color-text-secondary)]">{panX}</span>
+                <span className="text-xs font-mono w-10 text-right text-[var(--color-text-secondary)]">{panX}</span>
               </div>
               <div className="flex items-center gap-2">
-                <label htmlFor="pan-y" className="text-[10px] w-6 text-[var(--color-text-secondary)]">Y</label>
+                <label htmlFor="pan-y" className="text-xs w-6 text-[var(--color-text-secondary)]">Y</label>
                 <input
                   id="pan-y"
                   type="range"
@@ -261,14 +261,14 @@ export function Controls({
                   onChange={(e) => onPanYChange(Number(e.target.value))}
                   className="flex-1"
                 />
-                <span className="text-[10px] font-mono w-10 text-right text-[var(--color-text-secondary)]">{panY}</span>
+                <span className="text-xs font-mono w-10 text-right text-[var(--color-text-secondary)]">{panY}</span>
               </div>
             </div>
           </div>
 
           {/* Image Adjustments */}
           <div className="space-y-3 pt-2 border-t border-[var(--color-border)]">
-            <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+            <label className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
               Adjustments
             </label>
             
@@ -293,7 +293,7 @@ export function Controls({
 
           {/* Dither */}
           <div className="space-y-2">
-            <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+            <label className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
               Dither
             </label>
             <div className="grid grid-cols-3 gap-1.5">
@@ -332,13 +332,13 @@ export function Controls({
           {/* ASCII Mode Controls */}
           {viewMode === VIEW_MODE.ASCII && (
             <div className="space-y-3 pt-2 border-t border-[var(--color-border)]">
-              <label className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-accent)]">
+              <label className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-accent)]">
                 ASCII Settings
               </label>
 
               {/* Character Set */}
               <div className="space-y-2">
-                <label htmlFor="charset-select" className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+                <label htmlFor="charset-select" className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
                   Character Set
                 </label>
                 <select
@@ -358,7 +358,7 @@ export function Controls({
               {/* Custom Characters */}
               {charSet === 'CUSTOM' && (
                 <div className="space-y-2">
-                  <label htmlFor="custom-chars" className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
+                  <label htmlFor="custom-chars" className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--color-text-secondary)]">
                     Custom Chars
                   </label>
                   <input
@@ -423,7 +423,7 @@ export function Controls({
                       : 'border-[var(--color-border)] hover:border-[var(--color-text-secondary)] text-[var(--color-text-secondary)]'
                   }`}
                 >
-                  <span className="text-[10px] font-medium">Invert</span>
+                  <span className="text-xs font-medium">Invert</span>
                 </button>
                 <button
                   type="button"

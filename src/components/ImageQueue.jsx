@@ -34,13 +34,13 @@ export function ImageQueue({
   }, []);
 
   return (
-    <aside className="w-full md:w-52 lg:w-60 flex-shrink-0 flex flex-col">
+    <aside className="w-full flex flex-col">
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
+            <h2 className="text-xs sm:text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
               Queue
-            </span>
+            </h2>
             <span className="text-xs font-mono text-[var(--color-accent)]">
               {images.length}
             </span>
@@ -58,7 +58,7 @@ export function ImageQueue({
       </div>
 
       <div
-        className={`flex-1 mx-4 mb-4 rounded-2xl glass-panel overflow-hidden transition-all duration-300 ${
+        className={`flex-1 rounded-2xl glass-panel transition-all duration-300 ${
           isDragging ? 'border-[var(--color-accent)] border-2' : ''
         }`}
         onDrop={handleDrop}

@@ -12,7 +12,6 @@ import { LiveRegion } from './LiveRegion';
 import { announce } from '../utils/announce';
 
 export default function App() {
-  const [mobileTab, setMobileTab] = useState('preview');
   const [images, setImages] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [fitMode, setFitMode] = useState(FIT_MODE.COVER);
@@ -394,47 +393,9 @@ export default function App() {
         <div className="glow-bg" />
         <div className="noise-overlay" />
         
-        {/* Mobile Tab Bar */}
-        <div className="lg:hidden flex border-b border-[var(--color-border)]">
-          <button
-            type="button"
-            onClick={() => setMobileTab('preview')}
-            className={`flex-1 py-3 text-sm font-medium ${mobileTab === 'preview' ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]'}`}
-          >
-            Preview
-          </button>
-          <button
-            type="button"
-            onClick={() => setMobileTab('queue')}
-            className={`flex-1 py-3 text-sm font-medium ${mobileTab === 'queue' ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]'}`}
-          >
-            Images ({images.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setMobileTab('tools')}
-            className={`flex-1 py-3 text-sm font-medium ${mobileTab === 'tools' ? 'text-[var(--color-accent)] border-b-2 border-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]'}`}
-          >
-            Tools
-          </button>
-        </div>
-        
-        <main className="flex-1 flex flex-col lg:flex-row relative bg-[var(--color-bg)]">
-          {/* Image Queue - Desktop sidebar / Mobile tab */}
-          <div className={`bg-[var(--color-bg)] ${mobileTab === 'queue' || mobileTab === 'preview' ? '' : 'hidden'} lg:block`}>
-            <ImageQueue
-              images={images}
-              selectedIndex={selectedIndex}
-              onSelect={handleSelect}
-              onRemove={handleRemove}
-              onDuplicate={handleDuplicate}
-              onClearAll={handleClearAll}
-              onAddImages={handleAddImages}
-            />
-          </div>
-
-          {/* Device Preview */}
-          <div className={`flex-1 flex items-center justify-center p-4 ${mobileTab !== 'preview' && 'hidden lg:flex'}`}>
+        <main className="flex-1 flex flex-col lg:flex-row relative bg-[var(--color-bg)] overflow-y-auto">
+          {/* Device Preview - Mobile: full width top, Desktop: center */}
+          <div className="flex-1 flex items-center justify-center p-4 min-w-0">
             <DevicePreview
               ref={previewRef}
               isLoading={isProcessing}
@@ -453,9 +414,11 @@ export default function App() {
             />
           </div>
 
-          {/* Controls - Desktop sidebar / Mobile tab */}
-          <div className={`bg-[var(--color-bg)] ${mobileTab === 'tools' || mobileTab === 'preview' ? '' : 'hidden'} lg:block`}>
-            <Controls
+          {/* Sidebar - Mobile: stacked below preview, Desktop: right sidebar */}
+          <aside className="flex flex-col lg:flex-row w-full lg:w-auto lg:min-w-[320px] xl:min-w-[360px] gap-4 p-4 lg:p-0">
+            {/* Controls Panel */}
+            <div className="lg:flex-1">
+              <Controls
               fitMode={fitMode}
               onFitModeChange={setFitMode}
               scale={scale}
@@ -497,7 +460,21 @@ export default function App() {
               contrast={contrast}
               onContrastChange={setContrast}
             />
-          </div>
+            </div>
+            
+            {/* Image Queue Panel */}
+            <div className="lg:max-w-[280px]">
+              <ImageQueue
+                images={images}
+                selectedIndex={selectedIndex}
+                onSelect={handleSelect}
+                onRemove={handleRemove}
+                onDuplicate={handleDuplicate}
+                onClearAll={handleClearAll}
+                onAddImages={handleAddImages}
+              />
+            </div>
+          </aside>
         </main>
 
         <footer className="sticky bottom-0 glass-panel border-t border-[var(--color-border-subtle)] px-4 py-3 z-40 pb-safe">
