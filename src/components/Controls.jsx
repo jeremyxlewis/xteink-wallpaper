@@ -376,8 +376,8 @@ export function Controls({
                 label="Font Size"
                 value={fontSize}
                 onChange={onFontSizeChange}
-                min={6}
-                max={24}
+                min={8}
+                max={20}
                 unit="px"
               />
 
