@@ -20,7 +20,7 @@ export const DevicePreview = forwardRef(function DevicePreview(
     if (canvasRef.current && onCanvasReady) {
       onCanvasReady(canvasRef.current);
     }
-  }, [onCanvasReady]);
+  }, []);
 
   const handleWheel = useCallback((e) => {
     e.preventDefault();
