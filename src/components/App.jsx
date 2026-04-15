@@ -393,31 +393,25 @@ export default function App() {
         <div className="glow-bg" />
         <div className="noise-overlay" />
         
-        <main className="flex-1 flex flex-col lg:flex-row relative bg-[var(--color-bg)] overflow-y-auto">
-          {/* Device Preview - Mobile: full width top, Desktop: center */}
-          <div className="flex-1 flex items-center justify-center p-4 min-w-0">
-            <DevicePreview
-              ref={previewRef}
-              isLoading={isProcessing}
-              canvasWidth={renderedDimensions.width}
-              canvasHeight={renderedDimensions.height}
-              onCanvasReady={(canvas) => {
-                canvasRef.current = canvas;
-              }}
-              onPanChange={(x, y) => {
-                setPanX(x);
-                setPanY(y);
-              }}
-              onScaleChange={(s) => {
-                setScale(s);
-              }}
-            />
-          </div>
-
-          {/* Sidebar - Mobile: stacked below preview, Desktop: right sidebar */}
-          <aside className="flex flex-col lg:flex-row w-full lg:w-auto lg:min-w-[320px] xl:min-w-[360px] gap-4 p-4 lg:p-0">
+        <main className="flex-1 flex flex-col-reverse lg:flex-row relative bg-[var(--color-bg)]">
+          {/* Desktop: Preview left, Mobile: Preview at bottom */}
+          {/* Desktop: Sidebar right, Mobile: Stacked above */}
+          <aside className="flex flex-col w-full lg:w-auto lg:min-w-[360px] order-1 lg:order-2">
+            {/* Mobile: Image Queue at top, Desktop: side panel */}
+            <div className="order-1 lg:order-1">
+              <ImageQueue
+                images={images}
+                selectedIndex={selectedIndex}
+                onSelect={handleSelect}
+                onRemove={handleRemove}
+                onDuplicate={handleDuplicate}
+                onClearAll={handleClearAll}
+                onAddImages={handleAddImages}
+              />
+            </div>
+            
             {/* Controls Panel */}
-            <div className="lg:flex-1">
+            <div className="order-2 lg:order-2">
               <Controls
               fitMode={fitMode}
               onFitModeChange={setFitMode}
@@ -461,23 +455,30 @@ export default function App() {
               onContrastChange={setContrast}
             />
             </div>
-            
-            {/* Image Queue Panel */}
-            <div className="lg:max-w-[280px]">
-              <ImageQueue
-                images={images}
-                selectedIndex={selectedIndex}
-                onSelect={handleSelect}
-                onRemove={handleRemove}
-                onDuplicate={handleDuplicate}
-                onClearAll={handleClearAll}
-                onAddImages={handleAddImages}
-              />
-            </div>
           </aside>
+
+          {/* Device Preview - Desktop: left, Mobile: bottom */}
+          <div className="flex-1 flex items-center justify-center p-4 order-2 lg:order-1 min-w-0">
+            <DevicePreview
+              ref={previewRef}
+              isLoading={isProcessing}
+              canvasWidth={renderedDimensions.width}
+              canvasHeight={renderedDimensions.height}
+              onCanvasReady={(canvas) => {
+                canvasRef.current = canvas;
+              }}
+              onPanChange={(x, y) => {
+                setPanX(x);
+                setPanY(y);
+              }}
+              onScaleChange={(s) => {
+                setScale(s);
+              }}
+            />
+          </div>
         </main>
 
-        <footer className="sticky bottom-0 glass-panel border-t border-[var(--color-border-subtle)] px-4 py-3 z-40 pb-safe">
+        <footer className="lg:sticky lg:bottom-0 glass-panel border-t border-[var(--color-border-subtle)] px-4 py-3 z-40 pb-safe">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="text-xs text-[var(--color-text-secondary)] font-mono order-2 sm:order-1">
               Drag to pan • Scroll to zoom
