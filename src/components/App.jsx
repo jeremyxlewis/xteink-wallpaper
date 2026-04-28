@@ -1,143 +1,123 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
+import * as THREE from 'three';
 import { ImageQueue } from './ImageQueue';
 import { DevicePreview } from './DevicePreview';
 import { Controls } from './Controls';
 import { ExportModal } from './ExportModal';
 import { ToastContainer, useToast } from '../hooks/useToast';
-import { useImageProcessor, FIT_MODE, DITHER_MODE, TRANSFORMS, DEVICE_SIZES, VIEW_MODE } from '../hooks/useImageProcessor';
+import { useImageProcessor, FIT_MODE, TRANSFORMS, DEVICE_SIZES } from '../hooks/useImageProcessor';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LiveRegion } from './LiveRegion';
 import { announce } from '../utils/announce';
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_FILES = 100;
+
 export default function App() {
   const [images, setImages] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  
   const [fitMode, setFitMode] = useState(FIT_MODE.COVER);
   const [scale, setScale] = useState(100);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
-  const [ditherMode, setDitherMode] = useState(DITHER_MODE.NONE);
   const [transforms, setTransforms] = useState([]);
   const [exportModal, setExportModal] = useState({ open: false, progress: 0, total: 0, currentFile: '' });
   const [isExporting, setIsExporting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // View mode (Image or ASCII)
-  const [viewMode, setViewMode] = useState(VIEW_MODE.IMAGE);
-
-  // Image adjustments
-  const [brightness, setBrightness] = useState(0);
-  const [contrast, setContrast] = useState(1);
-
-  // ASCII options
-  const [charSet, setCharSet] = useState('CLASSIC');
-  const [customChars, setCustomChars] = useState('');
-  const [fontSize, setFontSize] = useState(10);
-  const [charSpacing, setCharSpacing] = useState(1);
-  const [lineHeight, setLineHeight] = useState(1);
-  const [invertColors, setInvertColors] = useState(false);
-  const [flipH, setFlipH] = useState(false);
-  const [flipV, setFlipV] = useState(false);
-  const [padding, setPadding] = useState(0);
-  const [ditherStrength, setDitherStrength] = useState(0);
-  
-  // Track rendered canvas dimensions
-  const [renderedDimensions, setRenderedDimensions] = useState({ width: 480, height: 800 });
+  const [screenTexture, setScreenTexture] = useState(null);
+  const prevScreenTextureRef = useRef(null);
 
   const imageIdRef = useRef(0);
 
-  const deviceSize = useMemo(() => DEVICE_SIZES.portrait, []);
-
-  const { canvasRef, loadImage, processImage, processASCII, exportBMP, exportASCIIBMP } = useImageProcessor();
-  const previewRef = useRef(null);
+  const { canvasRef, loadImage, processImage, exportBMP } = useImageProcessor();
   const { toasts, addToast, removeToast } = useToast();
 
   const loadImageRef = useRef(null);
   const processImageRef = useRef(null);
-  const processASCIIRef = useRef(null);
   const exportBMPRef = useRef(null);
-  const exportASCIIBMPRef = useRef(null);
+
+// canvasRef is managed by useImageProcessor hook for both processing and texture
 
   useEffect(() => {
     loadImageRef.current = loadImage;
     processImageRef.current = processImage;
-    processASCIIRef.current = processASCII;
     exportBMPRef.current = exportBMP;
-    exportASCIIBMPRef.current = exportASCIIBMP;
-  }, [loadImage, processImage, processASCII, exportBMP, exportASCIIBMP]);
+  }, [loadImage, processImage, exportBMP]);
 
   const selectedImage = images[selectedIndex];
 
   useEffect(() => {
+    let aborted = false;
+    
     if (selectedImage && canvasRef.current) {
       setIsProcessing(true);
       loadImageRef.current(selectedImage.file).then(() => {
-        if (viewMode === VIEW_MODE.ASCII) {
-          const result = processASCIIRef.current(
-            deviceSize.width,
-            deviceSize.height,
-            fitMode,
-            scale,
-            panX,
-            panY,
-            ditherMode,
-            transforms,
-            {
-              charSet,
-              customChars,
-              fontSize,
-              charSpacing,
-              lineHeight,
-              invertColors,
-              flipH,
-              flipV,
-              padding,
-              ditherStrength,
-              brightness,
-              contrast,
-              saturation: 1,
-              gamma: 1,
-            }
-          );
-          if (result && result.dimensions) {
-            setRenderedDimensions({
-              width: result.dimensions.width,
-              height: result.dimensions.height,
-            });
-          }
-        } else {
-          processImageRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms, {
-            brightness,
-            contrast,
-            saturation: 1,
-            gamma: 1,
-          });
-          setRenderedDimensions({ width: deviceSize.width, height: deviceSize.height });
+        if (aborted) return;
+        
+        processImageRef.current(
+          DEVICE_SIZES.portrait.width,
+          DEVICE_SIZES.portrait.height,
+          fitMode,
+          scale,
+          panX,
+          panY,
+          transforms
+        );
+
+        if (aborted) return;
+        
+        // Dispose old texture to prevent memory leaks
+        if (prevScreenTextureRef.current) {
+          prevScreenTextureRef.current.dispose();
         }
-        setIsProcessing(false);
-      }).catch(() => {
-        setIsProcessing(false);
+        
+        // Create texture directly from canvas
+        const texture = new THREE.CanvasTexture(canvasRef.current);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.flipY = false;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.needsUpdate = true;
+        prevScreenTextureRef.current = texture;
+        setScreenTexture(texture);
+        
+        if (!aborted) {
+          setIsProcessing(false);
+        }
+      }).catch((err) => {
+        if (!aborted) {
+          setIsProcessing(false);
+          addToast(err.message || 'Failed to process image', 'error');
+        }
       });
+    } else {
+      // Dispose texture when no image selected
+      if (prevScreenTextureRef.current) {
+        prevScreenTextureRef.current.dispose();
+        prevScreenTextureRef.current = null;
+      }
+      setScreenTexture(null);
     }
-  }, [selectedImage, fitMode, scale, panX, panY, ditherMode, transforms, deviceSize, viewMode, charSet, customChars, fontSize, charSpacing, lineHeight, invertColors, flipH, flipV, padding, ditherStrength, brightness, contrast]);
+    
+    return () => {
+      aborted = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedImage, fitMode, scale, panX, panY, transforms, addToast]);
 
   useEffect(() => {
-    if (selectedIndex >= 0 && images[selectedIndex]) {
-      const img = images[selectedIndex];
-      setFitMode(img.fitMode);
-      setScale(img.scale);
-      setPanX(img.panX);
-      setPanY(img.panY);
-      setDitherMode(img.ditherMode);
-      setTransforms(img.transforms || []);
+    if (selectedImage) {
+      setFitMode(selectedImage.fitMode);
+      setScale(selectedImage.scale);
+      setPanX(selectedImage.panX);
+      setPanY(selectedImage.panY);
+      setTransforms(selectedImage.transforms || []);
       announce(`Selected image ${selectedIndex + 1} of ${images.length}`);
     }
-  }, [selectedIndex]);
-
-  const MAX_FILE_SIZE = 50 * 1024 * 1024;
-  const MAX_FILES = 100;
+  }, [selectedIndex, selectedImage, images.length]);
 
   const createThumbnail = (file) => {
     return new Promise((resolve) => {
@@ -199,7 +179,6 @@ export default function App() {
             scale: 100,
             panX: 0,
             panY: 0,
-            ditherMode: DITHER_MODE.NONE,
             transforms: [],
           },
         ]);
@@ -222,7 +201,6 @@ export default function App() {
       setScale(images[idx].scale);
       setPanX(images[idx].panX);
       setPanY(images[idx].panY);
-      setDitherMode(images[idx].ditherMode);
       setTransforms(images[idx].transforms || []);
     }
   }, [images]);
@@ -265,20 +243,7 @@ export default function App() {
     setScale(100);
     setPanX(0);
     setPanY(0);
-    setDitherMode(DITHER_MODE.NONE);
     setTransforms([]);
-    setBrightness(0);
-    setContrast(1);
-    setCharSet('CLASSIC');
-    setCustomChars('');
-    setFontSize(10);
-    setCharSpacing(1);
-    setLineHeight(1);
-    setInvertColors(false);
-    setFlipH(false);
-    setFlipV(false);
-    setPadding(0);
-    setDitherStrength(0);
   }, []);
 
   const handleApplyToAll = useCallback(() => {
@@ -289,115 +254,142 @@ export default function App() {
         scale,
         panX,
         panY,
-        ditherMode,
         transforms,
       }))
     );
     addToast(`Applied to ${images.length} images`, 'success');
-  }, [images.length, fitMode, scale, panX, panY, ditherMode, transforms, addToast]);
+  }, [images.length, fitMode, scale, panX, panY, transforms, addToast]);
 
   const handleExportSingle = useCallback(async () => {
-    if (!selectedImage || !canvasRef.current) return;
-
-    const asciiOptions = {
-      charSet,
-      customChars,
-      fontSize,
-      charSpacing,
-      lineHeight,
-      invertColors,
-      flipH,
-      flipV,
-      padding,
-      ditherStrength,
-      brightness,
-      contrast,
-      saturation: 1,
-      gamma: 1,
-    };
-
-    const imageOptions = {
-      brightness,
-      contrast,
-      saturation: 1,
-      gamma: 1,
-    };
-
-    const blob = viewMode === VIEW_MODE.ASCII
-      ? exportASCIIBMPRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms, asciiOptions)
-      : exportBMPRef.current(deviceSize.width, deviceSize.height, fitMode, scale, panX, panY, ditherMode, transforms, imageOptions);
-    
-    if (blob) {
-      const suffix = viewMode === VIEW_MODE.ASCII ? '_ascii' : '';
-      const name = selectedImage.name.replace(/\.[^/.]+$/, '') + suffix + '.bmp';
-      saveAs(blob, name);
-      addToast('Image exported', 'success');
+    if (!selectedImage || !canvasRef.current) {
+      addToast('No image selected', 'error');
+      return;
     }
-  }, [selectedImage, deviceSize, fitMode, scale, panX, panY, ditherMode, transforms, viewMode, charSet, customChars, fontSize, charSpacing, lineHeight, invertColors, flipH, flipV, padding, ditherStrength, brightness, contrast, addToast]);
+
+    try {
+      const blob = exportBMPRef.current(
+        DEVICE_SIZES.portrait.width,
+        DEVICE_SIZES.portrait.height,
+        fitMode,
+        scale,
+        panX,
+        panY,
+        transforms
+      );
+      
+      if (blob) {
+        const name = selectedImage.name.replace(/\.[^/.]+$/, '') + '.bmp';
+        saveAs(blob, name);
+        addToast('Image exported', 'success');
+      }
+    } catch (error) {
+      addToast(error.message || 'Export failed', 'error');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedImage, fitMode, scale, panX, panY, transforms, addToast]);
 
   const handleExportBatch = useCallback(async () => {
-    if (images.length === 0) return;
+    if (images.length === 0) {
+      addToast('No images to export', 'error');
+      return;
+    }
 
     setIsExporting(true);
     setExportModal({ open: true, progress: 0, total: images.length, currentFile: '' });
+    let successCount = 0;
+    let errorCount = 0;
 
     const processAndExport = async (img, index) => {
       const useScale = index === selectedIndex ? scale : img.scale;
       const useFitMode = index === selectedIndex ? fitMode : img.fitMode;
       const usePanX = index === selectedIndex ? panX : img.panX;
       const usePanY = index === selectedIndex ? panY : img.panY;
-      const useDitherMode = index === selectedIndex ? ditherMode : img.ditherMode;
       const useTransforms = index === selectedIndex ? transforms : (img.transforms || []);
 
-      await loadImageRef.current(img.file);
-      processImageRef.current(deviceSize.width, deviceSize.height, useFitMode, useScale, usePanX, usePanY, useDitherMode, useTransforms);
-      
-      return exportBMPRef.current(deviceSize.width, deviceSize.height, useFitMode, useScale, usePanX, usePanY, useDitherMode, useTransforms);
+      try {
+        await loadImageRef.current(img.file);
+        processImageRef.current(
+          DEVICE_SIZES.portrait.width,
+          DEVICE_SIZES.portrait.height,
+          useFitMode,
+          useScale,
+          usePanX,
+          usePanY,
+          useTransforms
+        );
+        
+        const blob = exportBMPRef.current(
+          DEVICE_SIZES.portrait.width,
+          DEVICE_SIZES.portrait.height,
+          useFitMode,
+          useScale,
+          usePanX,
+          usePanY,
+          useTransforms
+        );
+        
+        if (blob) {
+          successCount++;
+          return blob;
+        }
+      } catch (error) {
+        errorCount++;
+        console.error(`Failed to export ${img.name}:`, error);
+      }
+      return null;
     };
 
-    const zip = new JSZip();
-    const batchSize = 3;
-    const totalBatches = Math.ceil(images.length / batchSize);
+    try {
+      const zip = new JSZip();
+      const batchSize = 3;
+      const totalBatches = Math.ceil(images.length / batchSize);
 
-    for (let batch = 0; batch < totalBatches; batch++) {
-      const startIdx = batch * batchSize;
-      const endIdx = Math.min(startIdx + batchSize, images.length);
-      const batchImages = images.slice(startIdx, endIdx);
+      for (let batch = 0; batch < totalBatches; batch++) {
+        const startIdx = batch * batchSize;
+        const endIdx = Math.min(startIdx + batchSize, images.length);
+        const batchImages = images.slice(startIdx, endIdx);
 
-      const results = await Promise.all(
-        batchImages.map((img, i) => processAndExport(img, startIdx + i))
-      );
+        const results = await Promise.all(
+          batchImages.map((img, i) => processAndExport(img, startIdx + i))
+        );
 
-      results.forEach((blob, i) => {
-        const fileIdx = startIdx + i;
-        if (blob) {
-          setExportModal((prev) => ({ ...prev, currentFile: images[fileIdx].name }));
-          zip.file(`wallpaper_${String(fileIdx + 1).padStart(3, '0')}.bmp`, blob);
-        }
-      });
+        results.forEach((blob, i) => {
+          const fileIdx = startIdx + i;
+          if (blob) {
+            setExportModal((prev) => ({ ...prev, currentFile: images[fileIdx].name }));
+            zip.file(`wallpaper_${String(fileIdx + 1).padStart(3, '0')}.bmp`, blob);
+          }
+        });
 
-      setExportModal((prev) => ({ ...prev, progress: endIdx }));
+        setExportModal((prev) => ({ ...prev, progress: endIdx }));
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      saveAs(zipBlob, 'wallpapers.zip');
+
+      if (errorCount > 0) {
+        addToast(`${successCount} exported, ${errorCount} failed`, 'warning');
+      } else {
+        addToast(`${successCount} images exported as ZIP`, 'success');
+      }
+    } catch {
+      addToast('Batch export failed', 'error');
+    } finally {
+      setExportModal((prev) => ({ ...prev, open: false }));
+      setIsExporting(false);
     }
-
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
-    saveAs(zipBlob, 'wallpapers.zip');
-
-    setExportModal((prev) => ({ ...prev, open: false }));
-    setIsExporting(false);
-    addToast(`${images.length} images exported as ZIP`, 'success');
-  }, [images, selectedIndex, deviceSize, fitMode, scale, panX, panY, ditherMode, transforms, addToast]);
+  }, [images, selectedIndex, fitMode, scale, panX, panY, transforms, addToast]);
 
   return (
     <ErrorBoundary>
-      <div className="min-h-[100dvh] flex flex-col relative">
+      <div className="min-h-[100dvh] flex flex-col relative overflow-x-hidden">
         <div className="glow-bg" />
         <div className="noise-overlay" />
         
+        <h1 className="sr-only">Xteink X4 Wallpaper Maker - Create 480x800 wallpapers for e-readers</h1>
+        
         <main className="flex-1 flex flex-col-reverse lg:flex-row relative bg-[var(--color-bg)]">
-          {/* Desktop: Preview left, Mobile: Preview at bottom */}
-          {/* Desktop: Sidebar right, Mobile: Stacked above */}
-          <aside className="flex flex-col w-full lg:w-auto lg:min-w-[360px] order-1 lg:order-2">
-            {/* Mobile: Image Queue at top, Desktop: side panel */}
+          <aside className="flex flex-col w-full lg:w-auto lg:min-w-[320px] order-1 lg:order-2">
             <div className="order-1 lg:order-1">
               <ImageQueue
                 images={images}
@@ -410,78 +402,36 @@ export default function App() {
               />
             </div>
             
-            {/* Controls Panel */}
             <div className="order-2 lg:order-2">
               <Controls
-              fitMode={fitMode}
-              onFitModeChange={setFitMode}
-              scale={scale}
-              onScaleChange={setScale}
-              panX={panX}
-              onPanXChange={setPanX}
-              panY={panY}
-              onPanYChange={setPanY}
-              ditherMode={ditherMode}
-              onDitherModeChange={setDitherMode}
-              transforms={transforms}
-              onTransformsChange={setTransforms}
-              onReset={handleReset}
-              onApplyToAll={handleApplyToAll}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              charSet={charSet}
-              onCharSetChange={setCharSet}
-              customChars={customChars}
-              onCustomCharsChange={setCustomChars}
-              fontSize={fontSize}
-              onFontSizeChange={setFontSize}
-              charSpacing={charSpacing}
-              onCharSpacingChange={setCharSpacing}
-              lineHeight={lineHeight}
-              onLineHeightChange={setLineHeight}
-              invertColors={invertColors}
-              onInvertColorsChange={setInvertColors}
-              flipH={flipH}
-              onFlipHChange={setFlipH}
-              flipV={flipV}
-              onFlipVChange={setFlipV}
-              padding={padding}
-              onPaddingChange={setPadding}
-              ditherStrength={ditherStrength}
-              onDitherStrengthChange={setDitherStrength}
-              brightness={brightness}
-              onBrightnessChange={setBrightness}
-              contrast={contrast}
-              onContrastChange={setContrast}
-            />
+                fitMode={fitMode}
+                onFitModeChange={setFitMode}
+                scale={scale}
+                onScaleChange={setScale}
+                panX={panX}
+                onPanXChange={setPanX}
+                panY={panY}
+                onPanYChange={setPanY}
+                transforms={transforms}
+                onTransformsChange={setTransforms}
+                onReset={handleReset}
+                onApplyToAll={handleApplyToAll}
+              />
             </div>
           </aside>
 
-          {/* Device Preview - Desktop: left, Mobile: bottom */}
           <div className="flex-1 flex items-center justify-center p-4 order-2 lg:order-1 min-w-0">
             <DevicePreview
-              ref={previewRef}
               isLoading={isProcessing}
-              canvasWidth={renderedDimensions.width}
-              canvasHeight={renderedDimensions.height}
-              onCanvasReady={(canvas) => {
-                canvasRef.current = canvas;
-              }}
-              onPanChange={(x, y) => {
-                setPanX(x);
-                setPanY(y);
-              }}
-              onScaleChange={(s) => {
-                setScale(s);
-              }}
+              screenTexture={screenTexture}
             />
           </div>
         </main>
 
-        <footer className="lg:sticky lg:bottom-0 glass-panel border-t border-[var(--color-border-subtle)] px-4 py-3 z-40 pb-safe">
+        <footer className="sticky bottom-0 glass-panel border-t border-[var(--color-border-subtle)] px-4 py-3 z-40 pb-safe">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="text-xs text-[var(--color-text-secondary)] font-mono order-2 sm:order-1">
-              Drag to pan • Scroll to zoom
+              xteink x4 • 480×800
             </div>
             <div className="flex gap-2 order-1 sm:order-2">
               <button
@@ -518,6 +468,14 @@ export default function App() {
 
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <LiveRegion />
+        
+        {/* Hidden canvas for image processing and texture generation */}
+        <canvas
+          ref={canvasRef}
+          width={480}
+          height={800}
+          style={{ display: 'none' }}
+        />
       </div>
     </ErrorBoundary>
   );

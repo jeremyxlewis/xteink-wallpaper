@@ -35,13 +35,13 @@ export function ImageQueue({
 
   return (
     <aside className="w-full flex flex-col">
-      <div className="p-4 pb-2">
+      <div className="p-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-xs sm:text-sm font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
+            <h2 className="text-sm font-medium text-[var(--color-text)]">
               Queue
             </h2>
-            <span className="text-xs font-mono text-[var(--color-accent)]">
+            <span className="text-xs font-mono text-[var(--color-accent)] bg-[var(--color-accent-glow)] px-2 py-0.5 rounded-full">
               {images.length}
             </span>
           </div>
@@ -86,7 +86,7 @@ export function ImageQueue({
             </div>
           </div>
         ) : (
-          <div className="p-2 grid grid-cols-3 gap-2 max-h-[200px] overflow-y-auto">
+          <div className="p-2 grid grid-cols-3 gap-2 max-h-[200px] lg:max-h-[280px] overflow-y-auto">
             {images.map((img, idx) => (
               <div
                 key={img.id}
@@ -94,17 +94,17 @@ export function ImageQueue({
                 tabIndex={0}
                 onClick={() => onSelect(idx)}
                 onKeyDown={(e) => e.key === 'Enter' && onSelect(idx)}
-                className={`group relative rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-1 focus:ring-offset-[var(--color-surface)] ${
+                className={`group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:ring-2 hover:ring-[var(--color-accent)]/50 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-1 focus:ring-offset-[var(--color-surface)] ${
                   selectedIndex === idx
-                    ? 'ring-2 ring-[var(--color-accent)] ring-offset-1 ring-offset-[var(--color-surface)]'
-                    : 'hover:ring-1 hover:ring-[var(--color-border)]'
+                    ? 'ring-2 ring-[var(--color-accent)] ring-offset-1 ring-offset-[var(--color-surface)] shadow-lg shadow-[var(--color-accent-glow)]'
+                    : ''
                 }`}
               >
-                <div className="aspect-square bg-[var(--color-surface-elevated)]">
+                <div className="aspect-square bg-[var(--color-surface-elevated)] overflow-hidden">
                   <img
                     src={img.thumbnail}
                     alt={img.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
                 
