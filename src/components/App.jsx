@@ -11,6 +11,7 @@ import { useImageProcessor, FIT_MODE, TRANSFORMS, DEVICE_SIZES } from '../hooks/
 import { ErrorBoundary } from './ErrorBoundary';
 import { LiveRegion } from './LiveRegion';
 import { announce } from '../utils/announce';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_FILES = 100;
@@ -28,6 +29,7 @@ export default function App() {
   const [isExporting, setIsExporting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [screenTexture, setScreenTexture] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const prevScreenTextureRef = useRef(null);
 
   const imageIdRef = useRef(0);
@@ -388,8 +390,23 @@ export default function App() {
         
         <h1 className="sr-only">Xteink X4 Wallpaper Maker - Create 480x800 wallpapers for e-readers</h1>
         
-        <main className="flex-1 flex flex-col-reverse lg:flex-row relative bg-[var(--color-bg)]">
-          <aside className="flex flex-col w-full lg:w-auto lg:min-w-[320px] order-1 lg:order-2">
+        <main className="flex-1 flex flex-col lg:flex-row relative bg-[var(--color-bg)]">
+          <div className="flex-1 flex items-center justify-center p-4 order-1 min-w-0 relative">
+            <button
+              type="button"
+              aria-label={sidebarOpen ? 'Hide controls' : 'Show controls'}
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden absolute top-4 right-4 z-10 p-2 rounded-lg bg-[var(--color-surface-glass)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors"
+            >
+              {sidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
+            </button>
+            <DevicePreview
+              isLoading={isProcessing}
+              screenTexture={screenTexture}
+            />
+          </div>
+
+          <aside className={`flex flex-col w-full lg:w-auto lg:min-w-[320px] order-2 ${sidebarOpen ? 'flex' : 'hidden lg:flex'}`}>
             <div className="order-1 lg:order-1">
               <ImageQueue
                 images={images}
@@ -419,13 +436,6 @@ export default function App() {
               />
             </div>
           </aside>
-
-          <div className="flex-1 flex items-center justify-center p-4 order-2 lg:order-1 min-w-0">
-            <DevicePreview
-              isLoading={isProcessing}
-              screenTexture={screenTexture}
-            />
-          </div>
         </main>
 
         <footer className="sticky bottom-0 glass-panel border-t border-[var(--color-border-subtle)] px-4 py-3 z-40 pb-safe">
